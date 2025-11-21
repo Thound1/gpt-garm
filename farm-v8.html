@@ -1,0 +1,2515 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>농장·목장·야외활동 시뮬레이터 - 빚 100만 골드 갚기 (모바일 대응)</title>
+  <style>
+    :root {
+      --tile-size: 26px;
+      --tile-gap: 3px;
+      --ranch-size: 32px;
+      --ranch-gap: 4px;
+      --base-font: 12px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      background: radial-gradient(circle at top, #1e293b 0, #020617 55%, #020617 100%);
+      color: #e5e7eb;
+      font-family: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      font-size: var(--base-font);
+    }
+    .game {
+      max-width: 1200px;
+      width: 100%;
+      padding: 16px 10px 32px;
+    }
+    h1 {
+      margin: 0 0 4px;
+      font-size: 26px;
+      letter-spacing: 0.02em;
+    }
+    .subtitle {
+      font-size: 13px;
+      color: #9ca3af;
+      margin-bottom: 10px;
+    }
+
+    .card {
+      border-radius: 16px;
+      border: 1px solid rgba(148,163,184,0.35);
+      background: radial-gradient(circle at top left, rgba(15,23,42,0.96), rgba(15,23,42,0.93));
+      padding: 10px 12px;
+      margin-bottom: 10px;
+      box-shadow: 0 22px 60px rgba(15,23,42,0.95);
+      position: relative;
+      overflow: hidden;
+    }
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: -40%;
+      background: radial-gradient(circle at top, rgba(56,189,248,0.04), transparent 65%);
+      opacity: 0.7;
+      pointer-events: none;
+    }
+    .card h2 {
+      margin: 0 0 4px;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .top-info-content {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 8px;
+      position: relative;
+      z-index: 1;
+    }
+    .stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      font-size: 13px;
+    }
+    .stat-pill {
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: radial-gradient(circle at top left, rgba(15,23,42,0.9), rgba(15,23,42,0.75));
+      border: 1px solid rgba(148,163,184,0.25);
+      box-shadow: 0 10px 25px rgba(15,23,42,0.7);
+      white-space: nowrap;
+    }
+    .debt-box {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 11px;
+    }
+    .debt-input-wrap {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      justify-content: flex-start;
+    }
+    input[type="number"] {
+      background: #020617;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      padding: 2px 4px;
+      color: #e5e7eb;
+      width: 80px;
+      font-size: 11px;
+    }
+
+    .btn {
+      border: none;
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 13px;
+      cursor: pointer;
+      background: linear-gradient(135deg,#1f2937,#020617);
+      color: #e5e7eb;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.75);
+      transition: transform 0.08s ease-out, box-shadow 0.08s ease-out, background 0.08s;
+      position: relative;
+      z-index: 1;
+    }
+    .btn.small {
+      padding: 4px 8px;
+      font-size: 12px;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.6);
+    }
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 28px rgba(0,0,0,0.85);
+      background: linear-gradient(135deg,#111827,#020617);
+    }
+    .btn.primary {
+      background: linear-gradient(135deg,#22c55e,#4ade80);
+      color: #022c22;
+      font-weight: 600;
+    }
+    .btn.primary:hover {
+      background: linear-gradient(135deg,#4ade80,#86efac);
+    }
+    .btn.selected {
+      outline: 2px solid #facc15;
+      outline-offset: 1px;
+    }
+    .btn.danger {
+      background: linear-gradient(135deg,#b91c1c,#ef4444);
+    }
+    .btn.danger:hover {
+      background: linear-gradient(135deg,#ef4444,#f97373);
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 4px;
+      margin-bottom: 4px;
+    }
+    .main-actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+    .tool-hint {
+      font-size: 11px;
+      color: #9ca3af;
+      margin-top: 2px;
+    }
+
+    .explain-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: relative;
+      z-index: 1;
+    }
+    .explain-body {
+      margin-top: 4px;
+      font-size: 11px;
+      color: #d1d5db;
+      position: relative;
+      z-index: 1;
+    }
+    .explain-body.collapsed { display: none; }
+
+    .log-box {
+      max-height: 160px;
+      overflow-y: auto;
+      padding-right: 4px;
+      font-size: 11px;
+      position: relative;
+      z-index: 1;
+      -webkit-overflow-scrolling: touch;
+    }
+    .log-entry { margin-bottom: 2px; }
+
+    .row-2col {
+      display: flex;
+      gap: 10px;
+      align-items: stretch;
+    }
+    .row-2col > .card {
+      flex: 1;
+      margin-bottom: 0;
+    }
+
+    .farm-grid {
+      display: grid;
+      grid-template-columns: repeat(9, var(--tile-size));
+      grid-template-rows: repeat(9, var(--tile-size));
+      gap: var(--tile-gap);
+      margin-top: 4px;
+      position: relative;
+      z-index: 1;
+    }
+    .tile {
+      width: var(--tile-size);
+      height: var(--tile-size);
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      border: 1px solid rgba(15,23,42,0.9);
+      transition: transform 0.05s, box-shadow 0.05s, background 0.1s, border 0.1s;
+      user-select: none;
+    }
+    .tile:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 16px rgba(0,0,0,0.6);
+    }
+    .tile.grass { background: linear-gradient(135deg,#14532d,#166534); }
+    .tile.tilled { background: linear-gradient(135deg,#78350f,#854d0e); }
+    .tile.crop-1 { background: linear-gradient(135deg,#166534,#15803d); }
+    .tile.crop-2 { background: linear-gradient(135deg,#15803d,#22c55e); }
+    .tile.crop-3 { background: linear-gradient(135deg,#16a34a,#4ade80); border-color:#facc15; }
+    .tile.watered { box-shadow: 0 0 0 2px rgba(56,189,248,0.7); }
+    .tile.low-quality {
+      filter: grayscale(0.4) brightness(0.95);
+      border-color: #9ca3af !important;
+    }
+    .tile.locked {
+      background: linear-gradient(135deg,#111827,#020617);
+      border-style: dashed;
+      border-color: #4b5563;
+      color: #4b5563;
+      cursor: default;
+      box-shadow: none;
+    }
+    .tile.locked:hover {
+      transform: none;
+      box-shadow: none;
+    }
+
+    .ranch-grid {
+      display: grid;
+      grid-template-columns: repeat(6, var(--ranch-size));
+      grid-auto-rows: var(--ranch-size);
+      gap: var(--ranch-gap);
+      margin-top: 4px;
+      position: relative;
+      z-index: 1;
+    }
+    .ranch-tile {
+      width: var(--ranch-size);
+      height: var(--ranch-size);
+      border-radius: 10px;
+      background: radial-gradient(circle at top, #0f172a, #020617);
+      border: 1px solid rgba(148,163,184,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      cursor: pointer;
+      transition: transform 0.05s, box-shadow 0.05s, background 0.1s;
+    }
+    .ranch-tile:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 16px rgba(0,0,0,0.6);
+      background: radial-gradient(circle at top, #111827,#020617);
+    }
+    .ranch-tile.locked {
+      cursor: default;
+      border-style: dashed;
+      border-color: #4b5563;
+      color: #4b5563;
+      background: radial-gradient(circle at top, #020617,#020617);
+      box-shadow: none;
+      font-size: 12px;
+    }
+    .ranch-tile.locked:hover {
+      transform: none;
+      box-shadow: none;
+      background: radial-gradient(circle at top, #020617,#020617);
+    }
+    .ranch-empty {
+      font-size: 10px;
+      color: #4b5563;
+    }
+
+    .shop-row, .item-row, .quest-row, .warehouse-row, .resident-row, .line-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 4px;
+      margin-bottom: 4px;
+      position: relative;
+      z-index: 1;
+    }
+    .section-label {
+      font-size: 11px;
+      font-weight: 600;
+      margin: 6px 0 3px;
+      color: #e5e7eb;
+      position: relative;
+      z-index: 1;
+    }
+    .badge {
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.5);
+      font-size: 10px;
+      color: #cbd5f5;
+      margin-left: 4px;
+    }
+    .hint {
+      font-size: 11px;
+      color: #9ca3af;
+      position: relative;
+      z-index: 1;
+    }
+
+    .house-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+      position: relative;
+      z-index: 1;
+    }
+    .house-icon {
+      width: 46px;
+      height: 46px;
+      border-radius: 14px;
+      background: radial-gradient(circle at top, #f97316,#facc15);
+      box-shadow: 0 12px 26px rgba(248,181,28,0.65);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+    }
+
+    .affinity-bar {
+      font-family: "Courier New", monospace;
+      font-size: 10px;
+      letter-spacing: 1px;
+    }
+
+    @media (max-width: 960px) {
+      .row-2col {
+        flex-direction: column;
+      }
+    }
+    @media (max-width: 768px) {
+      :root {
+        --tile-size: 22px;
+        --tile-gap: 3px;
+        --ranch-size: 28px;
+        --ranch-gap: 3px;
+        --base-font: 11px;
+      }
+      body {
+        font-size: var(--base-font);
+      }
+      .game {
+        padding: 14px 8px 28px;
+      }
+      h1 {
+        font-size: 22px;
+      }
+      .card {
+        padding: 8px 10px;
+        border-radius: 14px;
+      }
+    }
+    @media (max-width: 480px) {
+      :root {
+        --tile-size: 19px;
+        --ranch-size: 24px;
+        --base-font: 10px;
+      }
+      body {
+        font-size: var(--base-font);
+      }
+      h1 {
+        font-size: 20px;
+      }
+      .btn {
+        padding: 5px 10px;
+        font-size: 11px;
+      }
+      .btn.small {
+        padding: 3px 6px;
+        font-size: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <audio id="bgm" loop>
+    <source src="bgm.mp3" type="audio/mpeg" />
+  </audio>
+
+  <div class="game">
+    <h1>농장·목장·야외활동 시뮬레이터</h1>
+    <div class="subtitle">스타듀 감성으로 빚 1,000,000G 갚기</div>
+
+    <!-- 상단 정보 -->
+    <div class="card">
+      <div class="top-info-content">
+        <div class="stats">
+          <div class="stat-pill">📅 <span id="seasonName">봄</span> <span id="seasonDay">1</span>일차 (총 <span id="day">1</span>일)</div>
+          <div class="stat-pill">🌦 <span id="weatherText">맑음</span></div>
+          <div class="stat-pill">💰 골드: <span id="gold">500</span>G</div>
+          <div class="stat-pill">⚡ 에너지: <span id="energy">100</span>/<span id="maxEnergyLabel">100</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 빚 전용 카드 -->
+    <div class="card">
+      <h2>💸 빚 상황</h2>
+      <div class="debt-box">
+        <div>현재 빚: <b><span id="debt">1000000</span>G</b></div>
+        <div class="debt-input-wrap">
+          <input type="number" id="debtPayInput" min="1" placeholder="변제 금액" />
+          <button class="btn small primary" id="debtPayBtn">빛 변제하기</button>
+        </div>
+        <div class="hint">빚을 0G로 만들면 엔딩입니다.</div>
+      </div>
+    </div>
+
+    <!-- 주요 버튼 (다음날 / BGM만) -->
+    <div class="card">
+      <h2>🎯 주요 버튼</h2>
+      <div class="main-actions">
+        <button class="btn primary" id="nextDayBtn">⏭ 다음날 보내기</button>
+        <button class="btn small" id="bgmToggleBtn">🔈 BGM 켜기</button>
+      </div>
+    </div>
+
+    <!-- 게임 설명 (접기/펼치기) -->
+    <div class="card">
+      <div class="explain-header">
+        <h2>🎮 게임 설명</h2>
+        <button class="btn small" id="explainToggleBtn">더보기</button>
+      </div>
+      <div class="explain-body collapsed" id="explainBody">
+        이 게임의 목표는 <b>농장·목장·야외활동·마을 의뢰</b>를 통해 골드를 벌어<br>
+        <b>총 빚 1,000,000G</b>를 모두 갚고 <b>빛 0원</b>을 만드는 것입니다.<br><br>
+        - 계절마다 심을 수 있는 작물이 다르며, <b>판매가가 높은 작물일수록 성장 일수가 더 깁니다.</b><br>
+        - 제철이 지난 작물은 <b>하급품(50%)</b>으로 떨어집니다.<br>
+        - 밭과 목장은 골드를 투자해 <b>확장</b>할 수 있습니다.<br>
+        - 마을 주민 의뢰를 수행하면 <b>호감도</b>가 올라가고, 호감도 100이 되면 <b>결혼</b>할 수 있습니다.<br>
+        - 결혼 후에는 배우자가 새벽마다 농장의 일부 작업을 자동으로 도와줍니다.<br>
+        - 아이템은 상점에서 구입하고, <b>창고에서 사용·판매</b>할 수 있습니다.
+      </div>
+    </div>
+
+    <!-- 로그 -->
+    <div class="card">
+      <h2>📜 로그</h2>
+      <div class="log-box" id="log"></div>
+    </div>
+
+    <!-- 1행: 농장 / 씨앗 상점 -->
+    <div class="row-2col">
+      <div class="card">
+        <h2>🌾 농장</h2>
+        <div class="line-row">
+          <div class="hint">도구와 씨앗을 선택한 뒤 밭을 클릭해 작업할 수 있습니다.</div>
+          <div id="farmUpgradeInfo"></div>
+        </div>
+
+        <!-- 도구 버튼 & 현재 씨앗/도구 정보 -->
+        <div class="toolbar">
+          <button class="btn selected" data-tool="plow">🪓 쟁기</button>
+          <button class="btn" data-tool="seeder" id="seederBtn">🌱 파종기</button>
+          <button class="btn" data-tool="water">💧 물뿌리개</button>
+          <button class="btn" data-tool="harvest">🧺 호미</button>
+        </div>
+        <div class="tool-hint" id="toolHint"></div>
+
+        <div class="farm-grid" id="farmGrid"></div>
+      </div>
+
+      <div class="card">
+        <h2>🌱 씨앗 상점 (현재 계절 전용)</h2>
+        <div id="cropList"></div>
+      </div>
+    </div>
+
+    <!-- 2행: 목장 / 마을 의뢰 -->
+    <div class="row-2col">
+      <div class="card">
+        <h2>🐄 목장</h2>
+        <div class="line-row">
+          <div>현재 선택 가축: <span id="ranchSelectedLabel"><b>소 🐄</b></span></div>
+          <div>
+            <button class="btn small" data-animal="cow">소 (800G)</button>
+            <button class="btn small" data-animal="sheep">양 (700G)</button>
+            <button class="btn small" data-animal="pig">돼지 (600G)</button>
+          </div>
+        </div>
+        <div class="line-row">
+          <div class="hint">목장은 골드를 투자해 최대 30칸까지 확장할 수 있습니다.</div>
+          <div id="ranchUpgradeInfo"></div>
+        </div>
+        <div class="ranch-grid" id="ranchGrid"></div>
+        <div class="line-row" style="margin-top:4px;">
+          <div>
+            <span class="section-label">가축 수확</span><br>
+            <span class="hint">
+              - 소: 우유 (유축기 필요)<br>
+              - 양: 양털 (양털가위 필요)<br>
+              - 돼지: 가축 판매로만 수익
+            </span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:3px;">
+            <button class="btn small" id="milkBtn">🥛 소 우유 짜기</button>
+            <button class="btn small" id="shearBtn">✂️ 양 털 깎기</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>🏘 마을 의뢰</h2>
+        <div id="questList"></div>
+        <div class="section-label" style="margin-top:6px;">🏡 마을 특수 이벤트</div>
+        <div id="villageEventInfo">오늘은 아직 조용합니다.</div>
+      </div>
+    </div>
+
+    <!-- 3행: 창고 -->
+    <div class="card">
+      <h2>📦 창고</h2>
+      <div id="warehouseInfo"></div>
+    </div>
+
+    <!-- 4행: 오두막/야외활동 / 아이템 상점 -->
+    <div class="row-2col">
+      <div class="card">
+        <h2>🏡 오두막 & 업그레이드</h2>
+        <div class="house-header">
+          <div class="house-icon">🏠</div>
+          <div>
+            <div><b id="houseNameLabel">오두막 (Lv.1)</b></div>
+            <div style="font-size:11px;color:#cbd5f5;">
+              집을 업그레이드하면 최대 에너지가 늘어나고,<br>
+              결혼 후에는 배우자와 함께 거주하며 농장 일을 도와줍니다.
+            </div>
+          </div>
+        </div>
+        <div id="houseInfo"></div>
+        <div class="section-label" style="margin-top:6px;">🔧 농기구 & 목장 도구 업그레이드</div>
+        <div id="toolUpgradeInfo"></div>
+
+        <div class="section-label" style="margin-top:8px;">⛺ 야외 활동 (광산 & 낚시터)</div>
+        <div class="item-row">
+          <div>
+            ⛏ <b>광산 탐험</b><br>
+            <span class="hint">에너지 15 소모 / 광석과 레어 금속을 채굴합니다.</span>
+          </div>
+          <button class="btn small" id="mineExploreBtn">광산 가기</button>
+        </div>
+        <div class="item-row">
+          <div>
+            🎣 <b>낚시하기</b><br>
+            <span class="hint">에너지 10 소모 / 피라미·송사리·붕어·잉어 등을 낚습니다.</span>
+          </div>
+          <button class="btn small" id="fishBtn">낚시하기</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>🎒 아이템 상점</h2>
+        <div id="itemsInfo"></div>
+      </div>
+    </div>
+
+    <!-- 5행: 마을 주민 호감도 -->
+    <div class="card">
+      <h2>👥 마을 주민 호감도</h2>
+      <div id="residentsInfo"></div>
+    </div>
+  </div>
+
+  <script>
+    // ===== 상수 및 유틸 =====
+    const MAX_FARM_SIZE = 9;
+    const DAYS_PER_SEASON = 20;
+    const MINE_ENERGY_COST = 15;
+    const FISH_ENERGY_COST = 10;
+    const BASE_FIELD_TOOL_COST_PER_TILE = 5;
+    const BASE_MILKER_COST_PER_ANIMAL = 6;
+    const BASE_SHEARS_COST_PER_ANIMAL = 6;
+    const MAX_TOOL_LEVEL = 5;
+    const INITIAL_DEBT = 1000000;
+    const MAX_RANCH_SLOTS = 30;
+
+    const TOOL_EFFICIENCY = { 1:1.0, 2:0.7, 3:0.55, 4:0.45, 5:0.4 };
+
+    const seasonIds = ["spring","summer","fall","winter"];
+    const seasonNames = {
+      spring:"봄", summer:"여름", fall:"가을", winter:"겨울"
+    };
+
+    function computeGrowStages(price) {
+      // 가격이 비쌀수록 성장 일수 증가
+      if (price <= 50) return 3;   // 저가 작물: 3일
+      if (price <= 80) return 4;   // 중간: 4일
+      if (price <= 110) return 5;  // 비싼 편: 5일
+      return 6;                    // 아주 비싼 작물: 6일+
+    }
+
+    const weatherTypes = [
+      { id:"sun",   name:"맑음", icon:"☀️",  weight:0.6,  desc:"따뜻하고 평화로운 날씨입니다." },
+      { id:"rain",  name:"비",   icon:"🌧️",  weight:0.25, desc:"밤새 내린 비 덕분에 밭이 충분히 적셔졌습니다." },
+      { id:"cloud", name:"흐림", icon:"⛅",  weight:0.15, desc:"구름이 낀 잔잔한 하루입니다." }
+    ];
+
+    // 작물: growStages는 나중에 가격 기준으로 계산
+    const crops = {
+      carrot:    { id:"carrot",    name:"당근",    emoji:"🥕", buyPrice:20,  sellPrice:45,  seasons:["spring","fall"] },
+      tomato:    { id:"tomato",    name:"토마토",  emoji:"🍅", buyPrice:30,  sellPrice:65,  seasons:["summer"] },
+      potato:    { id:"potato",    name:"감자",    emoji:"🥔", buyPrice:25,  sellPrice:55,  seasons:["spring"] },
+      corn:      { id:"corn",      name:"옥수수",  emoji:"🌽", buyPrice:35,  sellPrice:75,  seasons:["summer","fall"] },
+      strawberry:{ id:"strawberry",name:"딸기",    emoji:"🍓", buyPrice:40,  sellPrice:90,  seasons:["spring"] },
+      pumpkin:   { id:"pumpkin",   name:"호박",    emoji:"🎃", buyPrice:50,  sellPrice:120, seasons:["fall"] },
+      rice:      { id:"rice",      name:"벼",      emoji:"🌾", buyPrice:45,  sellPrice:95,  seasons:["summer","fall"] },
+      pepper:    { id:"pepper",    name:"고추",    emoji:"🌶️", buyPrice:35,  sellPrice:80,  seasons:["summer"] },
+      eggplant:  { id:"eggplant",  name:"가지",    emoji:"🍆", buyPrice:30,  sellPrice:70,  seasons:["summer"] },
+      cabbage:   { id:"cabbage",   name:"양배추",  emoji:"🥬", buyPrice:30,  sellPrice:70,  seasons:["spring"] },
+      wheat:     { id:"wheat",     name:"밀",      emoji:"🌾", buyPrice:25,  sellPrice:60,  seasons:["fall"] }
+    };
+    // 판매가 기준으로 성장 일수 계산
+    Object.values(crops).forEach(c => {
+      c.growStages = computeGrowStages(c.sellPrice);
+    });
+
+    const LIVESTOCK_DEFS = {
+      cow:   { id:"cow",   name:"소",   emoji:"🐄", buyPrice:800, feedCost:15 },
+      sheep: { id:"sheep", name:"양",   emoji:"🐑", buyPrice:700, feedCost:12 },
+      pig:   { id:"pig",   name:"돼지", emoji:"🐖", buyPrice:600, feedCost:10 }
+    };
+
+    const HOUSE_LEVELS = [
+      { level:1, name:"오두막",     bonusMaxEnergy:0,  upgradeCost:1000,  desc:"기본 농장. 최대 에너지 100." },
+      { level:2, name:"작은 집",   bonusMaxEnergy:20, upgradeCost:3000,  desc:"조금 더 넓어진 집. 최대 에너지 +20." },
+      { level:3, name:"아늑한 집", bonusMaxEnergy:30, upgradeCost:6000,  desc:"훨씬 편안한 집. 최대 에너지 +30." },
+      { level:4, name:"편안한 집", bonusMaxEnergy:40, upgradeCost:12000, desc:"여유로운 공간. 최대 에너지 +40." },
+      { level:5, name:"농장 저택", bonusMaxEnergy:60, upgradeCost:null,  desc:"궁극의 농장 집. 최대 에너지 +60." }
+    ];
+
+    // 아이템 10종
+    const ITEM_DEFS = {
+      coffee: {
+        id:"coffee", name:"따뜻한 커피", emoji:"☕",
+        desc:"에너지 +25 회복", price:80, sellPrice:40
+      },
+      bread: {
+        id:"bread", name:"든든한 빵", emoji:"🍞",
+        desc:"에너지 +35 회복", price:110, sellPrice:55
+      },
+      lunchbox: {
+        id:"lunchbox", name:"점심 도시락", emoji:"🍱",
+        desc:"에너지 +60 회복", price:180, sellPrice:90
+      },
+      energyDrink: {
+        id:"energyDrink", name:"에너지 드링크", emoji:"⚡",
+        desc:"에너지 완전 회복", price:220, sellPrice:110
+      },
+      fertilizer: {
+        id:"fertilizer", name:"비료 포대", emoji:"🧪",
+        desc:"무작위 작물 여러 칸을 한 단계 성장", price:150, sellPrice:75
+      },
+      contractor: {
+        id:"contractor", name:"용역업체 쿠폰", emoji:"📦",
+        desc:"오늘 밭 전체 물주기 & 수확 자동 처리", price:400, sellPrice:200
+      },
+      luckyCoin: {
+        id:"luckyCoin", name:"행운의 동전", emoji:"🪙",
+        desc:"즉시 200G 획득", price:260, sellPrice:130
+      },
+      oreBox: {
+        id:"oreBox", name:"광물 상자", emoji:"📦",
+        desc:"돌·구리·철 광석을 무작위로 획득", price:240, sellPrice:120
+      },
+      fishBox: {
+        id:"fishBox", name:"생선 상자", emoji:"🎁",
+        desc:"무작위 생선 여러 마리 획득", price:240, sellPrice:120
+      },
+      animalSnack: {
+        id:"animalSnack", name:"가축 간식", emoji:"🦴",
+        desc:"소·양에서 우유·양털을 즉시 조금 얻음", price:260, sellPrice:130
+      }
+    };
+
+    const ORES = {
+      stone:   { id:"stone",   name:"돌",        emoji:"🪨", sellPrice:5 },
+      copper:  { id:"copper",  name:"구리 광석", emoji:"🟤", sellPrice:20 },
+      iron:    { id:"iron",    name:"철 광석",   emoji:"⚙️", sellPrice:40 },
+      goldOre: { id:"goldOre", name:"금 광석",   emoji:"💰", sellPrice:100 }
+    };
+
+    const FISH = {
+      pirami:   { id:"pirami",   name:"피라미", emoji:"🐟", sellPrice:15 },
+      songsari: { id:"songsari", name:"송사리", emoji:"🐟", sellPrice:20 },
+      bungeo:   { id:"bungeo",   name:"붕어",   emoji:"🐠", sellPrice:35 },
+      inge:     { id:"inge",     name:"잉어",   emoji:"🐡", sellPrice:60 }
+    };
+
+    const ANIMAL_PRODUCTS = {
+      milk: { id:"milk", name:"우유", emoji:"🥛", sellPrice:60 },
+      wool: { id:"wool", name:"양털", emoji:"🧶", sellPrice:90 }
+    };
+
+    const RESIDENTS = [
+      { id:"alex",   name:"Alex Johnson",   gender:"M" },
+      { id:"hiro",   name:"Hiro Tanaka",    gender:"M" },
+      { id:"minjun", name:"Minjun Park",    gender:"M" },
+      { id:"diego",  name:"Diego Alvarez",  gender:"M" },
+      { id:"jamal",  name:"Jamal Okafor",   gender:"M" },
+      { id:"emily",  name:"Emily Carter",   gender:"F" },
+      { id:"yuna",   name:"Yuna Sato",      gender:"F" },
+      { id:"jiwoo",  name:"Jiwoo Kim",      gender:"F" },
+      { id:"sofia",  name:"Sofia Garcia",   gender:"F" },
+      { id:"aisha",  name:"Aisha Hassan",   gender:"F" }
+    ];
+
+    // ===== 상태 =====
+    const state = {
+      day:1,
+      seasonDay:1,
+      seasonIndex:0,
+      weatherId:"sun",
+      gold:500,
+      debt:INITIAL_DEBT,
+      energy:100,
+      baseMaxEnergy:100,
+      maxEnergy:100,
+      activeTool:"plow",
+      toolLevels:{
+        plow:1, seeder:1, water:1, harvest:1,
+        milker:1, shears:1
+      },
+      tiles:[],
+      farmLevel:1,
+      selectedCropId:"carrot",
+      ranchStalls:[],
+      ranchUnlockedSlots:2,
+      ranchSelectedAnimal:"cow",
+      questOffers:[],
+      activeQuests:[],
+      villageEvent:null,
+      houseLevel:1,
+      items:{},
+      residents:RESIDENTS.map(r=>({ ...r, affinity:0, married:false })),
+      marriedResidentId:null,
+      gameCompleted:false,
+      warehouse:{
+        crops:{},
+        animal:{ milk:0, wool:0 },
+        ores:{ stone:0, copper:0, iron:0, goldOre:0 },
+        fish:{ pirami:0, songsari:0, bungeo:0, inge:0 }
+      }
+    };
+
+    // 창고 작물 초기화
+    Object.values(crops).forEach(c=>{
+      state.warehouse.crops[c.id] = { normal:0, low:0 };
+    });
+    // 아이템 초기화
+    Object.values(ITEM_DEFS).forEach(it=>{
+      state.items[it.id] = 0;
+    });
+
+    // ===== DOM =====
+    const dayEl = document.getElementById("day");
+    const seasonNameEl = document.getElementById("seasonName");
+    const seasonDayEl = document.getElementById("seasonDay");
+    const weatherTextEl = document.getElementById("weatherText");
+    const goldEl = document.getElementById("gold");
+    const debtEl = document.getElementById("debt");
+    const energyEl = document.getElementById("energy");
+    const maxEnergyLabelEl = document.getElementById("maxEnergyLabel");
+    const logEl = document.getElementById("log");
+    const farmGridEl = document.getElementById("farmGrid");
+    const farmUpgradeInfoEl = document.getElementById("farmUpgradeInfo");
+    const cropListEl = document.getElementById("cropList");
+    const ranchGridEl = document.getElementById("ranchGrid");
+    const ranchSelectedLabelEl = document.getElementById("ranchSelectedLabel");
+    const ranchUpgradeInfoEl = document.getElementById("ranchUpgradeInfo");
+    const questListEl = document.getElementById("questList");
+    const villageEventInfoEl = document.getElementById("villageEventInfo");
+    const warehouseInfoEl = document.getElementById("warehouseInfo");
+    const houseInfoEl = document.getElementById("houseInfo");
+    const houseNameLabelEl = document.getElementById("houseNameLabel");
+    const toolUpgradeInfoEl = document.getElementById("toolUpgradeInfo");
+    const itemsInfoEl = document.getElementById("itemsInfo");
+    const residentsInfoEl = document.getElementById("residentsInfo");
+    const toolButtons = document.querySelectorAll(".toolbar .btn");
+    const seederBtn = document.getElementById("seederBtn");
+    const toolHintEl = document.getElementById("toolHint");
+    const nextDayBtn = document.getElementById("nextDayBtn");
+    const bgmAudio = document.getElementById("bgm");
+    const bgmToggleBtn = document.getElementById("bgmToggleBtn");
+    const ranchAnimalButtons = document.querySelectorAll("button[data-animal]");
+    const milkBtn = document.getElementById("milkBtn");
+    const shearBtn = document.getElementById("shearBtn");
+    const mineExploreBtn = document.getElementById("mineExploreBtn");
+    const fishBtn = document.getElementById("fishBtn");
+    const debtPayInput = document.getElementById("debtPayInput");
+    const debtPayBtn = document.getElementById("debtPayBtn");
+    const explainToggleBtn = document.getElementById("explainToggleBtn");
+    const explainBody = document.getElementById("explainBody");
+
+    // ===== 유틸 =====
+    function getSeasonId(){ return seasonIds[state.seasonIndex]; }
+    function randomChoice(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+    function log(msg){
+      const div = document.createElement("div");
+      div.className = "log-entry";
+      div.textContent = "· " + msg;
+      logEl.appendChild(div);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+    function getWeatherDef(){
+      return weatherTypes.find(w=>w.id===state.weatherId) || weatherTypes[0];
+    }
+    function pickRandomWeather(){
+      const r = Math.random();
+      let acc = 0;
+      for(const w of weatherTypes){
+        acc += w.weight;
+        if(r<=acc) return w.id;
+      }
+      return "sun";
+    }
+    function spendEnergy(amount){
+      if(state.energy < amount){
+        alert("에너지가 부족합니다.");
+        return false;
+      }
+      state.energy -= amount;
+      return true;
+    }
+    function affinityBar(v){
+      const total = 10;
+      const filled = Math.round((v/100)*total);
+      return "█".repeat(filled) + "░".repeat(total - filled);
+    }
+    function getToolName(id){
+      switch(id){
+        case "plow": return "쟁기";
+        case "seeder": return "파종기";
+        case "water": return "물뿌리개";
+        case "harvest": return "호미";
+        case "milker": return "유축기";
+        case "shears": return "양털가위";
+        default: return "";
+      }
+    }
+    function getResidentIcon(res){
+      if(!res) return "❓";
+      const base = res.gender==="M" ? "👨" : "👩";
+      if(res.married || state.marriedResidentId === res.id) return "💍" + base;
+      return base;
+    }
+
+    // ===== 초기화 =====
+    function initFarm(){
+      state.tiles = [];
+      farmGridEl.innerHTML = "";
+      for(let y=0;y<MAX_FARM_SIZE;y++){
+        for(let x=0;x<MAX_FARM_SIZE;x++){
+          const tile = {
+            type:"grass",
+            cropId:null,
+            stage:0,
+            wateredToday:false,
+            quality:1.0,
+            locked:true
+          };
+          state.tiles.push(tile);
+          const div = document.createElement("div");
+          div.className = "tile grass";
+          div.dataset.index = y*MAX_FARM_SIZE + x;
+          div.addEventListener("click", onTileClick);
+          farmGridEl.appendChild(div);
+        }
+      }
+      applyFarmLock();
+      log("농장이 준비되었습니다.");
+    }
+
+    function applyFarmLock(){
+      const center = Math.floor(MAX_FARM_SIZE/2);
+      let radius;
+      if(state.farmLevel===1) radius = 2;   // 5x5
+      else if(state.farmLevel===2) radius = 3; // 7x7
+      else radius = 4;                     // 9x9
+      for(let y=0;y<MAX_FARM_SIZE;y++){
+        for(let x=0;x<MAX_FARM_SIZE;x++){
+          const idx = y*MAX_FARM_SIZE + x;
+          const tile = state.tiles[idx];
+          const dx = Math.abs(x-center);
+          const dy = Math.abs(y-center);
+          const unlocked = (dx<=radius && dy<=radius);
+          tile.locked = !unlocked;
+          if(tile.locked){
+            tile.type = "grass";
+            tile.cropId = null;
+            tile.stage = 0;
+            tile.wateredToday = false;
+            tile.quality = 1.0;
+          }
+        }
+      }
+    }
+
+    function initRanch(){
+      state.ranchStalls = [];
+      ranchGridEl.innerHTML = "";
+      for(let i=0;i<MAX_RANCH_SLOTS;i++){
+        state.ranchStalls.push({ animalId:null });
+        const div = document.createElement("div");
+        div.className = "ranch-tile";
+        div.dataset.index = i;
+        div.addEventListener("click", onRanchTileClick);
+        ranchGridEl.appendChild(div);
+      }
+      updateRanchUI();
+    }
+
+    function initCropList(){
+      cropListEl.innerHTML = "";
+      const seasonId = getSeasonId();
+      const available = Object.values(crops).filter(c=>c.seasons.includes(seasonId));
+      if(available.length===0){
+        const msg = document.createElement("div");
+        msg.className = "hint";
+        msg.textContent = "현재 계절에 심을 수 있는 씨앗이 없습니다.";
+        cropListEl.appendChild(msg);
+        return;
+      }
+      if(!available.some(c=>c.id===state.selectedCropId)){
+        state.selectedCropId = available[0].id;
+      }
+      available.forEach(crop=>{
+        const row = document.createElement("div");
+        row.className = "shop-row";
+        const left = document.createElement("div");
+        left.innerHTML = `${crop.emoji} <b>${crop.name}</b>
+          <span class="badge">${crop.buyPrice}G → ${crop.sellPrice}G</span>
+          <span class="badge">성장 ${crop.growStages}일</span>`;
+        const btn = document.createElement("button");
+        btn.className = "btn small";
+        btn.textContent = "씨앗 선택";
+        btn.addEventListener("click", ()=>{
+          state.selectedCropId = crop.id;
+          log(`${crop.name} 씨앗을 선택했습니다.`);
+          updateSelectedCropUI();
+        });
+        row.appendChild(left);
+        row.appendChild(btn);
+        cropListEl.appendChild(row);
+      });
+      updateSelectedCropUI();
+    }
+
+    // ===== UI =====
+    function updateSelectedCropUI(){
+      const crop = crops[state.selectedCropId];
+      if(crop && seederBtn){
+        seederBtn.textContent = `🌱 파종기 (${crop.name} 심기)`;
+      }
+      updateToolHint();
+    }
+
+    function updateStatsUI(){
+      dayEl.textContent = state.day;
+      seasonDayEl.textContent = state.seasonDay;
+      seasonNameEl.textContent = seasonNames[getSeasonId()];
+      const w = getWeatherDef();
+      weatherTextEl.textContent = `${w.icon} ${w.name}`;
+      goldEl.textContent = state.gold;
+      debtEl.textContent = state.debt;
+      energyEl.textContent = state.energy;
+      maxEnergyLabelEl.textContent = state.maxEnergy;
+    }
+
+    function getTile(idx){ return state.tiles[idx]; }
+
+    function updateFarmUI(){
+      const divs = farmGridEl.querySelectorAll(".tile");
+      divs.forEach((div,idx)=>{
+        const t = getTile(idx);
+        div.className = "tile";
+        let icon = "";
+        if(t.locked){
+          div.classList.add("locked");
+          div.textContent = "🔒";
+          return;
+        }
+        if(t.type==="grass"){
+          div.classList.add("grass");
+        } else if(t.type==="tilled"){
+          div.classList.add("tilled");
+        } else if(t.type==="crop" && t.cropId){
+          const crop = crops[t.cropId];
+          if(t.stage===1){
+            div.classList.add("crop-1");
+            icon = crop.emoji;
+          } else if(t.stage===2){
+            div.classList.add("crop-2");
+            icon = crop.emoji;
+          } else if(t.stage>=crop.growStages){
+            div.classList.add("crop-3");
+            icon = crop.emoji;
+            if(t.quality && t.quality<1){
+              div.classList.add("low-quality");
+            }
+          } else {
+            div.classList.add("tilled");
+          }
+        }
+        if(t.wateredToday){
+          div.classList.add("watered");
+        }
+        div.textContent = icon;
+      });
+      // 밭 확장 정보
+      let html = "";
+      if(state.farmLevel < 3){
+        const nextLevel = state.farmLevel+1;
+        const cost = farmUpgradeCost();
+        html = `<button class="btn small" id="farmUpgradeBtn">밭 확장 (Lv.${nextLevel}, ${cost}G)</button>`;
+      } else {
+        html = `<span class="hint">밭은 최대 크기입니다.</span>`;
+      }
+      farmUpgradeInfoEl.innerHTML = html;
+      const btn = document.getElementById("farmUpgradeBtn");
+      if(btn){
+        btn.addEventListener("click", expandFarm);
+      }
+    }
+
+    function updateRanchUI(){
+      const divs = ranchGridEl.querySelectorAll(".ranch-tile");
+      divs.forEach((div,idx)=>{
+        const stall = state.ranchStalls[idx];
+        div.innerHTML = "";
+        if(idx >= state.ranchUnlockedSlots){
+          div.classList.add("locked");
+          div.textContent = "🔒";
+          return;
+        } else {
+          div.classList.remove("locked");
+        }
+        if(!stall.animalId){
+          const span = document.createElement("span");
+          span.className = "ranch-empty";
+          span.textContent = "빈칸";
+          div.appendChild(span);
+        } else {
+          const def = LIVESTOCK_DEFS[stall.animalId];
+          div.textContent = def ? def.emoji : "?";
+        }
+      });
+      const def = LIVESTOCK_DEFS[state.ranchSelectedAnimal];
+      ranchSelectedLabelEl.innerHTML = `<b>${def.name} ${def.emoji}</b>`;
+
+      // 목장 확장 정보
+      let html = "";
+      if(state.ranchUnlockedSlots < MAX_RANCH_SLOTS){
+        const cost = ranchUpgradeCost();
+        html = `<button class="btn small" id="ranchUpgradeBtn">목장 확장 (+4칸, ${cost}G)</button>`;
+      } else {
+        html = `<span class="hint">목장은 최대 크기입니다.</span>`;
+      }
+      ranchUpgradeInfoEl.innerHTML = html;
+      const btn = document.getElementById("ranchUpgradeBtn");
+      if(btn) btn.addEventListener("click", expandRanch);
+    }
+
+    function updateToolHint(){
+      const crop = crops[state.selectedCropId];
+      const toolName = getToolName(state.activeTool);
+      const level = state.toolLevels[state.activeTool] || 1;
+      const eff = TOOL_EFFICIENCY[level] || 1.0;
+      const approxTiles = (["plow","seeder","water","harvest"].includes(state.activeTool) && level>=2) ? 9 : 1;
+      const approxCost = Math.ceil(BASE_FIELD_TOOL_COST_PER_TILE * eff * approxTiles);
+      if(crop){
+        toolHintEl.textContent =
+          `현재 씨앗: ${crop.name} / 선택 도구: ${toolName} Lv.${level} / 1회 사용 예상 에너지: 약 ${approxCost}`;
+      } else {
+        toolHintEl.textContent = "";
+      }
+    }
+
+    function updateQuestUI(){
+      questListEl.innerHTML = "";
+
+      // 신규 의뢰
+      const title1 = document.createElement("div");
+      title1.className = "section-label";
+      title1.textContent = "오늘의 신규 의뢰 (최대 3건)";
+      questListEl.appendChild(title1);
+
+      if(state.questOffers.length === 0){
+        const empty = document.createElement("div");
+        empty.className = "hint";
+        empty.textContent = "오늘은 새로운 의뢰가 없습니다.";
+        questListEl.appendChild(empty);
+      } else {
+        state.questOffers.forEach((q,idx)=>{
+          const crop = crops[q.cropId];
+          const res = state.residents.find(r=>r.id===q.clientResidentId);
+          const icon = getResidentIcon(res);
+          const row = document.createElement("div");
+          row.className = "quest-row";
+          const left = document.createElement("div");
+          left.innerHTML = `<b>${idx+1}.</b> 의뢰인: ${icon} <b>${res ? res.name : "???"}</b><br>
+            목표: <b>${crop.emoji} ${crop.name} ${q.target}개 납품</b><br>
+            보상: ${q.reward}G`;
+          const right = document.createElement("div");
+          if(!q.accepted){
+            const btn = document.createElement("button");
+            btn.className = "btn small";
+            btn.textContent = "퀘스트 받기";
+            btn.addEventListener("click", ()=>{
+              acceptQuest(idx);
+            });
+            right.appendChild(btn);
+          } else {
+            const span = document.createElement("span");
+            span.className = "hint";
+            span.textContent = "수락됨";
+            right.appendChild(span);
+          }
+          row.appendChild(left);
+          row.appendChild(right);
+          questListEl.appendChild(row);
+        });
+      }
+
+      // 수락한 의뢰
+      const title2 = document.createElement("div");
+      title2.className = "section-label";
+      title2.textContent = "진행 중인 의뢰";
+      questListEl.appendChild(title2);
+
+      if(state.activeQuests.length === 0){
+        const empty2 = document.createElement("div");
+        empty2.className = "hint";
+        empty2.textContent = "진행 중인 의뢰가 없습니다.";
+        questListEl.appendChild(empty2);
+      } else {
+        state.activeQuests.forEach((q,idx)=>{
+          const crop = crops[q.cropId];
+          const res = state.residents.find(r=>r.id===q.clientResidentId);
+          const icon = getResidentIcon(res);
+          const row = document.createElement("div");
+          row.className = "quest-row";
+          const left = document.createElement("div");
+          left.innerHTML = `<b>${idx+1}.</b> 의뢰인: ${icon} <b>${res ? res.name : "???"}</b><br>
+            목표: <b>${crop.emoji} ${crop.name} ${q.target}개 납품</b><br>
+            진행도: ${q.progress}/${q.target} / 보상: ${q.reward}G
+            ${q.completed ? '<br><span style="color:#bbf7d0;">완료됨</span>' : ""}`;
+          const right = document.createElement("div");
+          if(!q.completed){
+            const btn = document.createElement("button");
+            btn.className = "btn small danger";
+            btn.textContent = "퀘스트 취소";
+            btn.addEventListener("click", ()=>{
+              cancelActiveQuest(idx);
+            });
+            right.appendChild(btn);
+          }
+          row.appendChild(left);
+          row.appendChild(right);
+          questListEl.appendChild(row);
+        });
+      }
+    }
+
+    function updateVillageEventUI(){
+      const ev = state.villageEvent;
+      if(!ev){
+        villageEventInfoEl.textContent = "오늘은 마을이 조용한 하루입니다.";
+      } else {
+        villageEventInfoEl.innerHTML = `<b>${ev.title}</b><br>${ev.text}`;
+      }
+    }
+
+    function updateItemsUI(){
+      itemsInfoEl.innerHTML = "";
+      Object.values(ITEM_DEFS).forEach(def=>{
+        const row = document.createElement("div");
+        row.className = "item-row";
+        const left = document.createElement("div");
+        const count = state.items[def.id] || 0;
+        left.innerHTML = `${def.emoji} <b>${def.name}</b> (보유: ${count}개)
+          <span class="badge">가격: ${def.price}G</span><br>
+          <span class="hint">${def.desc}</span>`;
+        const right = document.createElement("div");
+        const buyBtn = document.createElement("button");
+        buyBtn.className = "btn small";
+        buyBtn.textContent = "구입";
+        buyBtn.addEventListener("click", ()=>{
+          if(state.gold < def.price){
+            alert(`${def.name}을(를) 살 골드가 부족합니다. (필요: ${def.price}G)`);
+            return;
+          }
+          state.gold -= def.price;
+          state.items[def.id] = (state.items[def.id] || 0) + 1;
+          log(`${def.name}을(를) 구입했습니다. (-${def.price}G)`);
+          updateStatsUI();
+          updateItemsUI();
+          updateWarehouseUI();
+        });
+        right.appendChild(buyBtn);
+        row.appendChild(left);
+        row.appendChild(right);
+        itemsInfoEl.appendChild(row);
+      });
+      const hint = document.createElement("div");
+      hint.className = "hint";
+      hint.textContent = "아이템은 상점에서만 구입할 수 있으며, 사용·판매는 창고에서 할 수 있습니다.";
+      itemsInfoEl.appendChild(hint);
+    }
+
+    function updateHouseUI(){
+      const levelCfg = HOUSE_LEVELS.find(h=>h.level===state.houseLevel);
+      const nextCfg = HOUSE_LEVELS.find(h=>h.level===state.houseLevel+1);
+      houseNameLabelEl.textContent = `${levelCfg.name} (Lv.${levelCfg.level})`;
+      let html = "";
+      html += `<div>현재 집 설명: ${levelCfg.desc}</div>`;
+      html += `<div style="margin-top:4px;">현재 최대 에너지: <b>${state.maxEnergy}</b></div>`;
+      if(state.marriedResidentId){
+        const sp = state.residents.find(r=>r.id===state.marriedResidentId);
+        if(sp){
+          html += `<div style="margin-top:4px;">함께 사는 주민: ${getResidentIcon(sp)} <b>${sp.name}</b> 💍</div>`;
+        }
+      }
+      if(nextCfg){
+        html += `<div style="margin-top:6px;">다음 집: <b>${nextCfg.name}</b> (업그레이드 비용: ${nextCfg.upgradeCost}G)</div>`;
+        html += `<button class="btn small" id="houseUpgradeBtn">집 업그레이드</button>`;
+      } else {
+        html += `<div class="hint" style="margin-top:4px;">집은 최대 레벨입니다.</div>`;
+      }
+      houseInfoEl.innerHTML = html;
+      const btn = document.getElementById("houseUpgradeBtn");
+      if(btn && nextCfg){
+        btn.addEventListener("click", upgradeHouse);
+      }
+
+      // 도구 업그레이드
+      let toolsHtml = "";
+      ["plow","seeder","water","harvest","milker","shears"].forEach(id=>{
+        const level = state.toolLevels[id] || 1;
+        const isMax = level >= MAX_TOOL_LEVEL;
+        const rangeLabel = (["plow","seeder","water","harvest"].includes(id))
+          ? (level>=2 ? "3×3" : "1칸")
+          : "사용 효율 증가";
+        const upgradeCost = 1000 * level;
+        toolsHtml += `<div class="line-row">
+          <div>${getToolName(id)} Lv.${level} / ${rangeLabel}</div>`;
+        if(!isMax){
+          toolsHtml += `<button class="btn small" data-upgrade-tool="${id}">업그레이드 (${upgradeCost}G)</button>`;
+        } else {
+          toolsHtml += `<span class="hint">최대 레벨</span>`;
+        }
+        toolsHtml += `</div>`;
+      });
+      toolUpgradeInfoEl.innerHTML = toolsHtml;
+      const upBtns = toolUpgradeInfoEl.querySelectorAll("button[data-upgrade-tool]");
+      upBtns.forEach(btn=>{
+        btn.addEventListener("click",()=>{
+          const id = btn.getAttribute("data-upgrade-tool");
+          upgradeTool(id);
+        });
+      });
+    }
+
+    function updateWarehouseUI(){
+      warehouseInfoEl.innerHTML = "";
+
+      // 작물
+      const cropsTitle = document.createElement("div");
+      cropsTitle.className = "section-label";
+      cropsTitle.textContent = "🌱 작물";
+      warehouseInfoEl.appendChild(cropsTitle);
+      let anyCrops = false;
+      Object.values(crops).forEach(crop=>{
+        const entry = state.warehouse.crops[crop.id];
+        const normal = entry.normal || 0;
+        const low = entry.low || 0;
+        if(normal>0){
+          anyCrops = true;
+          const row = document.createElement("div");
+          row.className = "warehouse-row";
+          const left = document.createElement("div");
+          left.innerHTML = `${crop.emoji} <b>${crop.name}</b> (정상품) x ${normal}개
+            <span class="badge">${crop.sellPrice}G</span>`;
+          const right = document.createElement("div");
+          const input = document.createElement("input");
+          input.type = "number";
+          input.min = 1;
+          input.value = normal;
+          const btn = document.createElement("button");
+          btn.className = "btn small";
+          btn.textContent = "팔기";
+          btn.addEventListener("click",()=>{
+            sellCrop(crop.id,"normal",parseInt(input.value,10)||0);
+          });
+          right.appendChild(input);
+          right.appendChild(btn);
+          row.appendChild(left);
+          row.appendChild(right);
+          warehouseInfoEl.appendChild(row);
+        }
+        if(low>0){
+          anyCrops = true;
+          const row = document.createElement("div");
+          row.className = "warehouse-row";
+          const left = document.createElement("div");
+          left.innerHTML = `${crop.emoji} <b>${crop.name}</b> (하급품) x ${low}개
+            <span class="badge">${Math.floor(crop.sellPrice*0.5)}G</span>`;
+          const right = document.createElement("div");
+          const input = document.createElement("input");
+          input.type = "number";
+          input.min = 1;
+          input.value = low;
+          const btn = document.createElement("button");
+          btn.className = "btn small";
+          btn.textContent = "팔기";
+          btn.addEventListener("click",()=>{
+            sellCrop(crop.id,"low",parseInt(input.value,10)||0);
+          });
+          right.appendChild(input);
+          right.appendChild(btn);
+          row.appendChild(left);
+          row.appendChild(right);
+          warehouseInfoEl.appendChild(row);
+        }
+      });
+      if(!anyCrops){
+        const hint = document.createElement("div");
+        hint.className = "hint";
+        hint.textContent = "보유 중인 작물이 없습니다.";
+        warehouseInfoEl.appendChild(hint);
+      }
+
+      // 가축 부산물
+      const animalTitle = document.createElement("div");
+      animalTitle.className = "section-label";
+      animalTitle.textContent = "🐄 가축 부산물";
+      warehouseInfoEl.appendChild(animalTitle);
+      let anyAnimal = false;
+      Object.values(ANIMAL_PRODUCTS).forEach(p=>{
+        const count = state.warehouse.animal[p.id] || 0;
+        if(count<=0) return;
+        anyAnimal = true;
+        const row = document.createElement("div");
+        row.className = "warehouse-row";
+        const left = document.createElement("div");
+        left.innerHTML = `${p.emoji} <b>${p.name}</b> x ${count}개 <span class="badge">${p.sellPrice}G</span>`;
+        const right = document.createElement("div");
+        const input = document.createElement("input");
+        input.type = "number";
+        input.min = 1;
+        input.value = count;
+        const btn = document.createElement("button");
+        btn.className = "btn small";
+        btn.textContent = "팔기";
+        btn.addEventListener("click",()=>{
+          sellAnimalProduct(p.id, parseInt(input.value,10)||0);
+        });
+        right.appendChild(input);
+        right.appendChild(btn);
+        row.appendChild(left);
+        row.appendChild(right);
+        warehouseInfoEl.appendChild(row);
+      });
+      if(!anyAnimal){
+        const hint = document.createElement("div");
+        hint.className = "hint";
+        hint.textContent = "보유 중인 가축 부산물이 없습니다.";
+        warehouseInfoEl.appendChild(hint);
+      }
+
+      // 광석
+      const oreTitle = document.createElement("div");
+      oreTitle.className = "section-label";
+      oreTitle.textContent = "⛏ 광석";
+      warehouseInfoEl.appendChild(oreTitle);
+      let anyOre = false;
+      Object.values(ORES).forEach(o=>{
+        const count = state.warehouse.ores[o.id] || 0;
+        if(count<=0) return;
+        anyOre = true;
+        const row = document.createElement("div");
+        row.className = "warehouse-row";
+        const left = document.createElement("div");
+        left.innerHTML = `${o.emoji} <b>${o.name}</b> x ${count}개 <span class="badge">${o.sellPrice}G</span>`;
+        const right = document.createElement("div");
+        const input = document.createElement("input");
+        input.type = "number";
+        input.min = 1;
+        input.value = count;
+        const btn = document.createElement("button");
+        btn.className = "btn small";
+        btn.textContent = "팔기";
+        btn.addEventListener("click",()=>{
+          sellOre(o.id, parseInt(input.value,10)||0);
+        });
+        right.appendChild(input);
+        right.appendChild(btn);
+        row.appendChild(left);
+        row.appendChild(right);
+        warehouseInfoEl.appendChild(row);
+      });
+      if(!anyOre){
+        const hint = document.createElement("div");
+        hint.className = "hint";
+        hint.textContent = "보유 중인 광석이 없습니다.";
+        warehouseInfoEl.appendChild(hint);
+      }
+
+      // 생선
+      const fishTitle = document.createElement("div");
+      fishTitle.className = "section-label";
+      fishTitle.textContent = "🎣 생선";
+      warehouseInfoEl.appendChild(fishTitle);
+      let anyFish = false;
+      Object.values(FISH).forEach(f=>{
+        const count = state.warehouse.fish[f.id] || 0;
+        if(count<=0) return;
+        anyFish = true;
+        const row = document.createElement("div");
+        row.className = "warehouse-row";
+        const left = document.createElement("div");
+        left.innerHTML = `${f.emoji} <b>${f.name}</b> x ${count}마리 <span class="badge">${f.sellPrice}G</span>`;
+        const right = document.createElement("div");
+        const input = document.createElement("input");
+        input.type = "number";
+        input.min = 1;
+        input.value = count;
+        const btn = document.createElement("button");
+        btn.className = "btn small";
+        btn.textContent = "팔기";
+        btn.addEventListener("click",()=>{
+          sellFish(f.id, parseInt(input.value,10)||0);
+        });
+        right.appendChild(input);
+        right.appendChild(btn);
+        row.appendChild(left);
+        row.appendChild(right);
+        warehouseInfoEl.appendChild(row);
+      });
+      if(!anyFish){
+        const hint = document.createElement("div");
+        hint.className = "hint";
+        hint.textContent = "보유 중인 생선이 없습니다.";
+        warehouseInfoEl.appendChild(hint);
+      }
+
+      // 아이템
+      const itemsTitle = document.createElement("div");
+      itemsTitle.className = "section-label";
+      itemsTitle.textContent = "🎁 아이템";
+      warehouseInfoEl.appendChild(itemsTitle);
+      let anyItem = false;
+      Object.values(ITEM_DEFS).forEach(def=>{
+        const count = state.items[def.id] || 0;
+        if(count<=0) return;
+        anyItem = true;
+        const row = document.createElement("div");
+        row.className = "warehouse-row";
+        const left = document.createElement("div");
+        left.innerHTML = `${def.emoji} <b>${def.name}</b> x ${count}개
+          <span class="badge">판매가: ${def.sellPrice}G</span>`;
+        const right = document.createElement("div");
+        const input = document.createElement("input");
+        input.type = "number";
+        input.min = 1;
+        input.value = count;
+        const useBtn = document.createElement("button");
+        useBtn.className = "btn small";
+        useBtn.textContent = "사용";
+        useBtn.addEventListener("click",()=>{
+          useItem(def.id, parseInt(input.value,10)||1, false);
+        });
+        const sellBtn = document.createElement("button");
+        sellBtn.className = "btn small";
+        sellBtn.textContent = "팔기";
+        sellBtn.addEventListener("click",()=>{
+          sellItem(def.id, parseInt(input.value,10)||0);
+        });
+        right.appendChild(useBtn);
+        right.appendChild(sellBtn);
+        row.appendChild(left);
+        row.appendChild(right);
+        warehouseInfoEl.appendChild(row);
+      });
+      if(!anyItem){
+        const hint = document.createElement("div");
+        hint.className = "hint";
+        hint.textContent = "보유 중인 아이템이 없습니다.";
+        warehouseInfoEl.appendChild(hint);
+      }
+    }
+
+    function updateResidentsUI(){
+      residentsInfoEl.innerHTML = "";
+
+      const males = state.residents.filter(r=>r.gender==="M");
+      const females = state.residents.filter(r=>r.gender==="F");
+
+      const maleTitle = document.createElement("div");
+      maleTitle.className = "section-label";
+      maleTitle.textContent = "👨 남성 주민";
+      residentsInfoEl.appendChild(maleTitle);
+
+      if(males.length===0){
+        const hint = document.createElement("div");
+        hint.className = "hint";
+        hint.textContent = "등록된 남성 주민이 없습니다.";
+        residentsInfoEl.appendChild(hint);
+      } else {
+        males.forEach(res=>{
+          const row = document.createElement("div");
+          row.className = "resident-row";
+          const left = document.createElement("div");
+          const icon = getResidentIcon(res);
+          left.innerHTML = `${icon} <b>${res.name}</b> (호감도: ${res.affinity}/100)<br>
+            <span class="affinity-bar">${affinityBar(res.affinity)}</span>`;
+          const right = document.createElement("div");
+          if(res.married || state.marriedResidentId === res.id){
+            right.innerHTML = `<span class="hint">배우자</span>`;
+          } else if(!state.marriedResidentId && res.affinity >= 100){
+            const btn = document.createElement("button");
+            btn.className = "btn small";
+            btn.textContent = "결혼하기";
+            btn.addEventListener("click",()=>{
+              marryResident(res.id);
+            });
+            right.appendChild(btn);
+          }
+          row.appendChild(left);
+          row.appendChild(right);
+          residentsInfoEl.appendChild(row);
+        });
+      }
+
+      const femaleTitle = document.createElement("div");
+      femaleTitle.className = "section-label";
+      femaleTitle.textContent = "👩 여성 주민";
+      residentsInfoEl.appendChild(femaleTitle);
+
+      if(females.length===0){
+        const hint = document.createElement("div");
+        hint.className = "hint";
+        hint.textContent = "등록된 여성 주민이 없습니다.";
+        residentsInfoEl.appendChild(hint);
+      } else {
+        females.forEach(res=>{
+          const row = document.createElement("div");
+          row.className = "resident-row";
+          const left = document.createElement("div");
+          const icon = getResidentIcon(res);
+          left.innerHTML = `${icon} <b>${res.name}</b> (호감도: ${res.affinity}/100)<br>
+            <span class="affinity-bar">${affinityBar(res.affinity)}</span>`;
+          const right = document.createElement("div");
+          if(res.married || state.marriedResidentId === res.id){
+            right.innerHTML = `<span class="hint">배우자</span>`;
+          } else if(!state.marriedResidentId && res.affinity >= 100){
+            const btn = document.createElement("button");
+            btn.className = "btn small";
+            btn.textContent = "결혼하기";
+            btn.addEventListener("click",()=>{
+              marryResident(res.id);
+            });
+            right.appendChild(btn);
+          }
+          row.appendChild(left);
+          row.appendChild(right);
+          residentsInfoEl.appendChild(row);
+        });
+      }
+
+      const hint = document.createElement("div");
+      hint.className = "hint";
+      hint.textContent = "마을 의뢰를 완료하면 의뢰인의 호감도가 상승합니다. 호감도 100이 되면 결혼할 수 있습니다.";
+      residentsInfoEl.appendChild(hint);
+    }
+
+    function updateUI(){
+      updateStatsUI();
+      updateFarmUI();
+      updateRanchUI();
+      updateQuestUI();
+      updateVillageEventUI();
+      updateItemsUI();
+      updateHouseUI();
+      updateWarehouseUI();
+      updateResidentsUI();
+      updateToolHint();
+    }
+
+    // ===== 밭 & 도구 =====
+    function getAffectedIndices(centerIndex, toolId){
+      const level = state.toolLevels[toolId] || 1;
+      const isField = ["plow","seeder","water","harvest"].includes(toolId);
+      const indices = [];
+      if(!isField){
+        indices.push(centerIndex);
+        return indices;
+      }
+      const range3x3 = level>=2;
+      if(!range3x3){
+        indices.push(centerIndex);
+      } else {
+        const cx = centerIndex % MAX_FARM_SIZE;
+        const cy = Math.floor(centerIndex / MAX_FARM_SIZE);
+        for(let dy=-1;dy<=1;dy++){
+          for(let dx=-1;dx<=1;dx++){
+            const nx = cx+dx, ny = cy+dy;
+            if(nx>=0 && nx<MAX_FARM_SIZE && ny>=0 && ny<MAX_FARM_SIZE){
+              indices.push(ny*MAX_FARM_SIZE + nx);
+            }
+          }
+        }
+      }
+      return indices;
+    }
+
+    function onTileClick(e){
+      if(state.gameCompleted){
+        log("이미 모든 빚을 갚았습니다. 엔딩 이후에는 자유롭게 둘러볼 수 있습니다.");
+        return;
+      }
+      const idx = parseInt(e.currentTarget.dataset.index,10);
+      const tile = getTile(idx);
+      if(tile.locked){
+        log("아직 확장하지 않은 구역입니다. 밭을 확장하면 사용할 수 있습니다.");
+        return;
+      }
+      const indices = getAffectedIndices(idx, state.activeTool).filter(i=>!state.tiles[i].locked);
+      if(indices.length===0) return;
+      const energyCost = calcFieldToolEnergy(state.activeTool, indices.length);
+      if(!spendEnergy(energyCost)) return;
+
+      indices.forEach(i=>{
+        const t = getTile(i);
+        switch(state.activeTool){
+          case "plow": hoeTile(t); break;
+          case "seeder": plantTile(t); break;
+          case "water": waterTile(t); break;
+          case "harvest": harvestTile(t); break;
+        }
+      });
+      log(`${getToolName(state.activeTool)}를 사용했습니다. (-${energyCost} 에너지)`);
+      updateUI();
+    }
+
+    function calcFieldToolEnergy(toolId, tileCount){
+      const level = state.toolLevels[toolId] || 1;
+      const eff = TOOL_EFFICIENCY[level] || 1.0;
+      return Math.ceil(tileCount * BASE_FIELD_TOOL_COST_PER_TILE * eff);
+    }
+
+    function calcAnimalToolEnergy(toolId, animalCount){
+      const level = state.toolLevels[toolId] || 1;
+      const eff = TOOL_EFFICIENCY[level] || 1.0;
+      const base = (toolId==="milker") ? BASE_MILKER_COST_PER_ANIMAL : BASE_SHEARS_COST_PER_ANIMAL;
+      return Math.ceil(animalCount * base * eff);
+    }
+
+    function hoeTile(tile){
+      if(tile.type==="grass"){
+        tile.type = "tilled";
+        tile.cropId = null;
+        tile.stage = 0;
+        tile.wateredToday = false;
+        tile.quality = 1.0;
+      }
+    }
+
+    function plantTile(tile){
+      const seasonId = getSeasonId();
+      const crop = crops[state.selectedCropId];
+      if(!crop) return;
+      if(!crop.seasons.includes(seasonId)){
+        alert(`${seasonNames[seasonId]}에는 ${crop.name}를 심을 수 없습니다.`);
+        return;
+      }
+      if(tile.type==="tilled" && tile.stage===0 && !tile.cropId){
+        if(state.gold < crop.buyPrice){
+          alert(`${crop.name} 씨앗을 살 골드가 부족합니다. (필요: ${crop.buyPrice}G)`);
+          return;
+        }
+        state.gold -= crop.buyPrice;
+        tile.type = "crop";
+        tile.cropId = crop.id;
+        tile.stage = 1;
+        tile.wateredToday = false;
+        tile.quality = 1.0;
+      }
+    }
+
+    function waterTile(tile){
+      if(tile.type==="crop" && tile.cropId){
+        tile.wateredToday = true;
+      }
+    }
+
+    function harvestTile(tile){
+      if(tile.type==="crop" && tile.cropId){
+        const crop = crops[tile.cropId];
+        if(tile.stage >= crop.growStages){
+          const isLow = tile.quality && tile.quality<1;
+          const entry = state.warehouse.crops[crop.id];
+          if(isLow) entry.low++;
+          else entry.normal++;
+          tile.type = "tilled";
+          tile.stage = 0;
+          tile.cropId = null;
+          tile.wateredToday = false;
+          tile.quality = 1.0;
+        }
+      }
+    }
+
+    // ===== 목장 =====
+    function onRanchTileClick(e){
+      if(state.gameCompleted) return;
+      const idx = parseInt(e.currentTarget.dataset.index,10);
+      if(idx >= state.ranchUnlockedSlots){
+        log("아직 확장하지 않은 목장 칸입니다. 목장을 확장해야 사용 가능합니다.");
+        return;
+      }
+      const stall = state.ranchStalls[idx];
+      if(!stall.animalId) buyAnimal(idx);
+      else sellAnimal(idx);
+      updateStatsUI();
+      updateRanchUI();
+    }
+
+    function buyAnimal(index){
+      const stall = state.ranchStalls[index];
+      const def = LIVESTOCK_DEFS[state.ranchSelectedAnimal];
+      if(!def) return;
+      if(stall.animalId){
+        alert("이미 가축이 있는 칸입니다.");
+        return;
+      }
+      if(state.gold < def.buyPrice){
+        alert(`${def.name}을(를) 살 골드가 부족합니다. (필요: ${def.buyPrice}G)`);
+        return;
+      }
+      state.gold -= def.buyPrice;
+      stall.animalId = def.id;
+      log(`${def.emoji} ${def.name}을(를) 들였습니다. (-${def.buyPrice}G)`);
+    }
+
+    function sellAnimal(index){
+      const stall = state.ranchStalls[index];
+      const def = LIVESTOCK_DEFS[stall.animalId];
+      if(!def) return;
+      const refund = Math.floor(def.buyPrice * 0.6);
+      state.gold += refund;
+      log(`${def.emoji} ${def.name}을(를) 판매했습니다. (+${refund}G)`);
+      stall.animalId = null;
+    }
+
+    // ===== 확장 비용 =====
+    function farmUpgradeCost(){
+      if(state.farmLevel===1) return 1500;
+      if(state.farmLevel===2) return 4000;
+      return 0;
+    }
+
+    function expandFarm(){
+      if(state.farmLevel>=3){
+        log("밭은 이미 최대 크기입니다.");
+        return;
+      }
+      const cost = farmUpgradeCost();
+      if(state.gold < cost){
+        alert(`밭을 확장할 골드가 부족합니다. (필요: ${cost}G)`);
+        return;
+      }
+      state.gold -= cost;
+      state.farmLevel++;
+      applyFarmLock();
+      log(`밭이 확장되었습니다! (현재 레벨: ${state.farmLevel})`);
+      updateStatsUI();
+      updateFarmUI();
+    }
+
+    function ranchUpgradeCost(){
+      if(state.ranchUnlockedSlots >= MAX_RANCH_SLOTS) return 0;
+      const stepIndex = Math.floor((state.ranchUnlockedSlots - 2)/4);
+      return 800 + stepIndex * 600;
+    }
+
+    function expandRanch(){
+      if(state.ranchUnlockedSlots >= MAX_RANCH_SLOTS){
+        log("목장은 이미 최대 크기입니다.");
+        return;
+      }
+      const cost = ranchUpgradeCost();
+      if(state.gold < cost){
+        alert(`목장을 확장할 골드가 부족합니다. (필요: ${cost}G)`);
+        return;
+      }
+      state.gold -= cost;
+      state.ranchUnlockedSlots = Math.min(MAX_RANCH_SLOTS, state.ranchUnlockedSlots + 4);
+      log(`목장이 확장되었습니다! (사용 가능한 칸: ${state.ranchUnlockedSlots}칸)`);
+      updateStatsUI();
+      updateRanchUI();
+    }
+
+    // ===== 다음날 =====
+    function calcMaxEnergy(){
+      let bonus = 0;
+      HOUSE_LEVELS.forEach(h=>{
+        if(h.level <= state.houseLevel) bonus += h.bonusMaxEnergy;
+      });
+      return state.baseMaxEnergy + bonus;
+    }
+
+    function handleLivestockDaily(){
+      const counts = { cow:0, sheep:0, pig:0 };
+      state.ranchStalls.forEach(s=>{
+        if(s.animalId) counts[s.animalId]++;
+      });
+      Object.values(LIVESTOCK_DEFS).forEach(def=>{
+        const c = counts[def.id];
+        if(c>0){
+          const feed = def.feedCost * c;
+          if(state.gold >= feed){
+            state.gold -= feed;
+            log(`${def.emoji} ${def.name} ${c}마리에게 사료를 주었습니다. (-${feed}G)`);
+          } else {
+            log(`${def.emoji} ${def.name}에게 줄 사료가 부족합니다. 오늘은 굶겼습니다...`);
+          }
+        }
+      });
+    }
+
+    function generateDailyQuestOffers(){
+      state.questOffers = [];
+      for(let i=0;i<3;i++){
+        const cropId = randomChoice(Object.keys(crops));
+        const crop = crops[cropId];
+        const target = 2 + Math.floor(Math.random()*4);
+        const reward = target * (crop.sellPrice + 10);
+        const res = randomChoice(state.residents);
+        state.questOffers.push({
+          cropId,
+          target,
+          reward,
+          clientResidentId: res.id,
+          accepted:false
+        });
+      }
+      log("오늘의 마을 신규 의뢰 3건이 갱신되었습니다.");
+    }
+
+    function generateVillageEvent(){
+      const r = Math.random();
+      if(r < 0.4){
+        const gain = 100 + Math.floor(Math.random()*151);
+        state.gold += gain;
+        state.villageEvent = {
+          title:"떠돌이 상인의 방문",
+          text:`떠돌이 상인이 남긴 물건을 되팔아 ${gain}G를 벌었습니다.`
+        };
+        log(`마을 이벤트: 떠돌이 상인의 방문 (+${gain}G)`);
+      } else if(r < 0.7){
+        const amount = Math.min(state.gold, 80 + Math.floor(Math.random()*121));
+        state.gold -= amount;
+        state.villageEvent = {
+          title:"마을 공동 기금 모금일",
+          text:`마을 우물과 길 보수를 위해 ${amount}G를 기부했습니다.`
+        };
+        log(`마을 이벤트: 공동 기금 모금일 (-${amount}G)`);
+      } else if(r < 0.85){
+        state.maxEnergy += 10;
+        state.energy = state.maxEnergy;
+        state.villageEvent = {
+          title:"작은 축제",
+          text:"마을에서 열린 작은 축제에 참여했습니다. 기분이 좋아져 내일 더 오래 일할 수 있을 것 같습니다. (최대 에너지 +10)"
+        };
+        log("마을 이벤트: 작은 축제 (최대 에너지 +10)");
+      } else {
+        const item = randomChoice(Object.values(ITEM_DEFS));
+        state.items[item.id] = (state.items[item.id]||0) + 1;
+        state.villageEvent = {
+          title:"주민의 선물",
+          text:`고마움을 전하고 싶었던 주민이 ${item.name}을(를) 선물했습니다. (아이템 +1)`
+        };
+        log(`마을 이벤트: ${item.name} 선물을 받았습니다.`);
+      }
+    }
+
+    function spouseHelpDaily(){
+      if(!state.marriedResidentId) return;
+      const sp = state.residents.find(r=>r.id===state.marriedResidentId);
+      if(!sp) return;
+      let affected = 0;
+      const seasonId = getSeasonId();
+      const inSeasonCrops = Object.values(crops).filter(c=>c.seasons.includes(seasonId));
+      state.tiles.forEach(t=>{
+        if(t.locked) return;
+        if(Math.random() < 0.3){
+          if(t.type==="tilled" && !t.cropId && inSeasonCrops.length>0){
+            const crop = randomChoice(inSeasonCrops);
+            t.type = "crop";
+            t.cropId = crop.id;
+            t.stage = 1;
+            t.wateredToday = false;
+            t.quality = 1.0;
+            affected++;
+          } else if(t.type==="crop" && t.cropId && !t.wateredToday){
+            t.wateredToday = true;
+            affected++;
+          }
+        }
+      });
+      if(affected>0){
+        log(`💍 ${sp.name}이(가) 새벽에 농장을 도와 ${affected}칸의 작업을 대신해 주었습니다.`);
+      }
+    }
+
+    function nextDay(){
+      if(state.gameCompleted){
+        log("이미 모든 빚을 갚았습니다. 엔딩 이후에는 자유롭게 둘러볼 수 있습니다.");
+        return;
+      }
+      state.day++;
+      state.seasonDay++;
+      let seasonChanged = false;
+      if(state.seasonDay > DAYS_PER_SEASON){
+        state.seasonDay = 1;
+        state.seasonIndex = (state.seasonIndex+1) % seasonIds.length;
+        seasonChanged = true;
+        log(`=== 새로운 계절, ${seasonNames[getSeasonId()]}이(가) 찾아왔습니다! ===`);
+        initCropList();
+      }
+
+      state.maxEnergy = calcMaxEnergy();
+      state.energy = state.maxEnergy;
+
+      const currentSeason = getSeasonId();
+
+      if(seasonChanged){
+        let degraded = 0;
+        state.tiles.forEach(t=>{
+          if(t.locked) return;
+          if(t.type==="crop" && t.cropId){
+            const crop = crops[t.cropId];
+            if(t.stage >= crop.growStages && !crop.seasons.includes(currentSeason)){
+              t.quality = 0.5;
+              degraded++;
+            }
+          }
+        });
+        if(degraded>0){
+          log(`계절이 바뀌며 ${degraded}칸의 작물이 제철을 놓쳐 하급품이 되었습니다.`);
+        }
+      }
+
+      // 작물 성장
+      state.tiles.forEach(t=>{
+        if(t.locked) { t.wateredToday=false; return; }
+        if(t.type==="crop" && t.cropId){
+          const crop = crops[t.cropId];
+          if(t.wateredToday && t.stage < crop.growStages){
+            let growChance = 1.0;
+            if(!crop.seasons.includes(currentSeason)) growChance = 0.5;
+            if(Math.random()<growChance) t.stage++;
+          }
+          t.wateredToday = false;
+        } else {
+          t.wateredToday = false;
+        }
+      });
+
+      state.weatherId = pickRandomWeather();
+      const w = getWeatherDef();
+      log(`=== ${seasonNames[currentSeason]} ${state.seasonDay}일차, 날씨: ${w.icon} ${w.name} ===`);
+      log(w.desc);
+
+      if(state.weatherId==="rain"){
+        state.tiles.forEach(t=>{
+          if(t.locked) return;
+          if(t.type==="crop" && t.cropId) t.wateredToday=true;
+        });
+        log("비가 내려 오늘은 모든 작물이 자동으로 물을 받았습니다.");
+      }
+
+      handleLivestockDaily();
+      generateDailyQuestOffers();
+      generateVillageEvent();
+      spouseHelpDaily();
+
+      updateUI();
+    }
+
+    // ===== 아이템 사용 & 판매 =====
+    function useItem(id, amount, silent){
+      amount = Math.max(1, amount);
+      let available = state.items[id] || 0;
+      if(available <= 0){
+        alert("사용할 아이템이 없습니다.");
+        return;
+      }
+      const useCount = Math.min(available, amount);
+      const def = ITEM_DEFS[id];
+      for(let i=0;i<useCount;i++){
+        switch(id){
+          case "coffee":
+            state.energy = Math.min(state.maxEnergy, state.energy+25);
+            break;
+          case "bread":
+            state.energy = Math.min(state.maxEnergy, state.energy+35);
+            break;
+          case "lunchbox":
+            state.energy = Math.min(state.maxEnergy, state.energy+60);
+            break;
+          case "energyDrink":
+            state.energy = state.maxEnergy;
+            break;
+          case "fertilizer":
+            applyFertilizer();
+            break;
+          case "contractor":
+            applyContractor();
+            break;
+          case "luckyCoin":
+            state.gold += 200;
+            break;
+          case "oreBox":
+            state.warehouse.ores.stone += 5 + Math.floor(Math.random()*6);
+            state.warehouse.ores.copper += 2 + Math.floor(Math.random()*3);
+            if(Math.random()<0.5) state.warehouse.ores.iron += 1 + Math.floor(Math.random()*2);
+            break;
+          case "fishBox":
+            Object.values(FISH).forEach(f=>{
+              if(Math.random()<0.5){
+                state.warehouse.fish[f.id] += 1 + Math.floor(Math.random()*2);
+              }
+            });
+            break;
+          case "animalSnack":
+            const cowCount = state.ranchStalls.filter(s=>s.animalId==="cow").length;
+            const sheepCount = state.ranchStalls.filter(s=>s.animalId==="sheep").length;
+            state.warehouse.animal.milk += cowCount;
+            state.warehouse.animal.wool += sheepCount;
+            break;
+        }
+      }
+      state.items[id] = available - useCount;
+      if(!silent){
+        log(`${def.name}을(를) ${useCount}개 사용했습니다.`);
+      }
+      updateStatsUI();
+      updateWarehouseUI();
+      updateItemsUI();
+    }
+
+    function applyFertilizer(){
+      const indices = [];
+      state.tiles.forEach((t,idx)=>{
+        if(t.locked) return;
+        if(t.type==="crop" && t.cropId){
+          const crop = crops[t.cropId];
+          if(t.stage < crop.growStages) indices.push(idx);
+        }
+      });
+      if(indices.length===0){
+        log("비료를 뿌릴만한 작물이 없습니다.");
+        return;
+      }
+      for(let i=indices.length-1;i>0;i--){
+        const j = Math.floor(Math.random()*(i+1));
+        [indices[i],indices[j]] = [indices[j],indices[i]];
+      }
+      const maxTargets = 12;
+      let affected = 0;
+      indices.slice(0,maxTargets).forEach(idx=>{
+        const t = state.tiles[idx];
+        const crop = crops[t.cropId];
+        if(t.stage < crop.growStages){
+          t.stage++;
+          affected++;
+        }
+      });
+      log(`🧪 비료를 사용해 ${affected}칸의 작물이 한 단계 성장했습니다.`);
+    }
+
+    function applyContractor(){
+      let watered = 0, harvested = 0;
+      state.tiles.forEach(t=>{
+        if(t.locked) return;
+        if(t.type==="crop" && t.cropId){
+          const crop = crops[t.cropId];
+          if(t.stage >= crop.growStages){
+            const isLow = t.quality && t.quality<1;
+            const entry = state.warehouse.crops[crop.id];
+            if(isLow) entry.low++;
+            else entry.normal++;
+            t.type="tilled";
+            t.stage=0;
+            t.cropId=null;
+            t.wateredToday=false;
+            t.quality=1.0;
+            harvested++;
+          } else {
+            if(!t.wateredToday){
+              t.wateredToday=true;
+              watered++;
+            }
+          }
+        }
+      });
+      log(`📦 용역업체가 대신 밭을 정리했습니다. 물주기 ${watered}칸, 수확 ${harvested}칸 처리.`);
+    }
+
+    function sellItem(id, amount){
+      if(amount<=0) return;
+      const available = state.items[id] || 0;
+      if(available<=0){
+        alert("판매할 아이템이 없습니다.");
+        return;
+      }
+      const def = ITEM_DEFS[id];
+      const qty = Math.min(available, amount);
+      const gain = qty * def.sellPrice;
+      state.items[id] -= qty;
+      state.gold += gain;
+      log(`${def.name} ${qty}개를 판매했습니다. (+${gain}G)`);
+      updateStatsUI();
+      updateWarehouseUI();
+      updateItemsUI();
+    }
+
+    // ===== 집 & 도구 업그레이드 =====
+    function upgradeHouse(){
+      const current = state.houseLevel;
+      const levelCfg = HOUSE_LEVELS.find(h=>h.level===current);
+      const nextCfg = HOUSE_LEVELS.find(h=>h.level===current+1);
+      if(!nextCfg){
+        log("집은 이미 최대 레벨입니다.");
+        return;
+      }
+      if(state.gold < nextCfg.upgradeCost){
+        alert(`집을 업그레이드할 골드가 부족합니다. (필요: ${nextCfg.upgradeCost}G)`);
+        return;
+      }
+      state.gold -= nextCfg.upgradeCost;
+      state.houseLevel = nextCfg.level;
+      state.maxEnergy = calcMaxEnergy();
+      state.energy = state.maxEnergy;
+      log(`집이 "${nextCfg.name}"(으)로 업그레이드되었습니다! 최대 에너지가 ${state.maxEnergy}가 되었습니다.`);
+      updateUI();
+    }
+
+    function upgradeTool(id){
+      const level = state.toolLevels[id] || 1;
+      if(level >= MAX_TOOL_LEVEL){
+        log(`${getToolName(id)}는 이미 최대 레벨입니다.`);
+        return;
+      }
+      const cost = 1000 * level;
+      if(state.gold < cost){
+        alert(`${getToolName(id)}를 업그레이드할 골드가 부족합니다. (필요: ${cost}G)`);
+        return;
+      }
+      state.gold -= cost;
+      state.toolLevels[id] = level+1;
+      log(`${getToolName(id)}가 Lv.${level+1}(으)로 업그레이드되었습니다.`);
+      updateUI();
+    }
+
+    // ===== 결혼 =====
+    function marryResident(resId){
+      if(state.marriedResidentId){
+        log("이미 결혼한 상태입니다.");
+        return;
+      }
+      const res = state.residents.find(r=>r.id===resId);
+      if(!res || res.affinity<100){
+        log("아직 호감도가 충분하지 않습니다.");
+        return;
+      }
+      res.married = true;
+      state.marriedResidentId = res.id;
+      log(`${res.name}과(와) 결혼했습니다! 이제 새벽마다 농장을 조금 도와줍니다.`);
+      updateUI();
+    }
+
+    // ===== 창고 판매 & 퀘스트 연동 =====
+    function sellCrop(cropId, quality, amount){
+      if(amount<=0) return;
+      const entry = state.warehouse.crops[cropId];
+      const available = (quality==="low" ? entry.low : entry.normal);
+      if(available<=0){
+        alert("판매할 작물이 없습니다.");
+        return;
+      }
+      const qty = Math.min(available, amount);
+      const crop = crops[cropId];
+      const price = (quality==="low" ? Math.floor(crop.sellPrice*0.5) : crop.sellPrice);
+      const gain = qty * price;
+      if(quality==="low") entry.low -= qty;
+      else entry.normal -= qty;
+      state.gold += gain;
+      log(`${crop.name} ${quality==="low"?"(하급품)":""} ${qty}개를 판매했습니다. (+${gain}G)`);
+      applyQuestProgressFromSale(cropId, qty);
+      updateStatsUI();
+      updateWarehouseUI();
+      updateResidentsUI();
+      updateQuestUI();
+    }
+
+    function applyQuestProgressFromSale(cropId, qtySold){
+      let remaining = qtySold;
+      state.activeQuests.forEach(q=>{
+        if(q.completed || q.cropId!==cropId) return;
+        if(remaining<=0) return;
+        const need = q.target - q.progress;
+        const use = Math.min(need, remaining);
+        if(use<=0) return;
+        q.progress += use;
+        remaining -= use;
+        const crop = crops[cropId];
+        const res = state.residents.find(r=>r.id===q.clientResidentId);
+        log(`의뢰 진행: ${res ? res.name : "???"}의 ${crop.name} 납품 ${q.progress}/${q.target}`);
+        if(q.progress >= q.target){
+          q.completed = true;
+          state.gold += q.reward;
+          if(res){
+            res.affinity = Math.min(100, res.affinity + 15);
+          }
+          log(`퀘스트 완료! 보상으로 ${q.reward}G를 받았고, ${res ? res.name : "???"}의 호감도가 상승했습니다.`);
+        }
+      });
+      updateStatsUI();
+    }
+
+    function sellAnimalProduct(id, amount){
+      if(amount<=0) return;
+      const available = state.warehouse.animal[id] || 0;
+      if(available<=0){
+        alert("판매할 가축 부산물이 없습니다.");
+        return;
+      }
+      const def = ANIMAL_PRODUCTS[id];
+      const qty = Math.min(available, amount);
+      const gain = qty * def.sellPrice;
+      state.warehouse.animal[id] -= qty;
+      state.gold += gain;
+      log(`${def.name} ${qty}개를 판매했습니다. (+${gain}G)`);
+      updateStatsUI();
+      updateWarehouseUI();
+    }
+
+    function sellOre(id, amount){
+      if(amount<=0) return;
+      const available = state.warehouse.ores[id] || 0;
+      if(available<=0){
+        alert("판매할 광석이 없습니다.");
+        return;
+      }
+      const def = ORES[id];
+      const qty = Math.min(available, amount);
+      const gain = qty * def.sellPrice;
+      state.warehouse.ores[id] -= qty;
+      state.gold += gain;
+      log(`${def.name} ${qty}개를 판매했습니다. (+${gain}G)`);
+      updateStatsUI();
+      updateWarehouseUI();
+    }
+
+    function sellFish(id, amount){
+      if(amount<=0) return;
+      const available = state.warehouse.fish[id] || 0;
+      if(available<=0){
+        alert("판매할 생선이 없습니다.");
+        return;
+      }
+      const def = FISH[id];
+      const qty = Math.min(available, amount);
+      const gain = qty * def.sellPrice;
+      state.warehouse.fish[id] -= qty;
+      state.gold += gain;
+      log(`${def.name} ${qty}마리를 판매했습니다. (+${gain}G)`);
+      updateStatsUI();
+      updateWarehouseUI();
+    }
+
+    // ===== 광산 & 낚시 =====
+    function mineExplore(){
+      if(!spendEnergy(MINE_ENERGY_COST)) return;
+      const r = Math.random();
+      if(r < 0.25){
+        state.warehouse.ores.stone += 5 + Math.floor(Math.random()*6);
+        log("⛏ 돌을 잔뜩 캐냈습니다.");
+      } else if(r < 0.55){
+        state.warehouse.ores.copper += 2 + Math.floor(Math.random()*3);
+        log("⛏ 구리 광석을 발견했습니다.");
+      } else if(r < 0.8){
+        state.warehouse.ores.iron += 1 + Math.floor(Math.random()*3);
+        log("⛏ 철 광석을 채굴했습니다.");
+      } else {
+        state.warehouse.ores.goldOre += 1;
+        log("💰 반짝이는 금 광석을 발견했습니다!");
+      }
+      updateStatsUI();
+      updateWarehouseUI();
+    }
+
+    function goFishing(){
+      if(!spendEnergy(FISH_ENERGY_COST)) return;
+      const r = Math.random();
+      let id, qty;
+      if(r < 0.35){
+        id = "pirami"; qty = 1 + Math.floor(Math.random()*3);
+      } else if(r < 0.7){
+        id = "songsari"; qty = 1 + Math.floor(Math.random()*2);
+      } else if(r < 0.9){
+        id = "bungeo"; qty = 1 + Math.floor(Math.random()*2);
+      } else {
+        id = "inge"; qty = 1;
+      }
+      state.warehouse.fish[id] += qty;
+      log(`🎣 ${FISH[id].name} ${qty}마리를 낚았습니다.`);
+      updateStatsUI();
+      updateWarehouseUI();
+    }
+
+    // ===== 유축기 & 양털가위 =====
+    function milkCows(){
+      const cowCount = state.ranchStalls.filter(s=>s.animalId==="cow").length;
+      if(cowCount===0){
+        log("우유를 짤 소가 없습니다.");
+        return;
+      }
+      const energyCost = calcAnimalToolEnergy("milker", cowCount);
+      if(!spendEnergy(energyCost)) return;
+      const level = state.toolLevels.milker || 1;
+      const milkPerCow = level;
+      const totalMilk = cowCount * milkPerCow;
+      state.warehouse.animal.milk += totalMilk;
+      log(`🥛 유축기를 사용해 소 ${cowCount}마리에서 우유 ${totalMilk}개를 얻었습니다. (-${energyCost} 에너지)`);
+      updateStatsUI();
+      updateWarehouseUI();
+    }
+
+    function shearSheep(){
+      const sheepCount = state.ranchStalls.filter(s=>s.animalId==="sheep").length;
+      if(sheepCount===0){
+        log("양털을 깎을 양이 없습니다.");
+        return;
+      }
+      const energyCost = calcAnimalToolEnergy("shears", sheepCount);
+      if(!spendEnergy(energyCost)) return;
+      const level = state.toolLevels.shears || 1;
+      const woolPerSheep = level;
+      const totalWool = sheepCount * woolPerSheep;
+      state.warehouse.animal.wool += totalWool;
+      log(`✂️ 양털가위를 사용해 양 ${sheepCount}마리에서 양털 ${totalWool}개를 얻었습니다. (-${energyCost} 에너지)`);
+      updateStatsUI();
+      updateWarehouseUI();
+    }
+
+    // ===== 빚 변제 =====
+    function payDebt(){
+      const val = parseInt(debtPayInput.value,10);
+      if(!val || val<=0){
+        alert("빛 변제 금액을 올바르게 입력해주세요.");
+        return;
+      }
+      if(state.debt<=0){
+        log("이미 모든 빚을 갚았습니다.");
+        return;
+      }
+      if(val > state.gold){
+        alert("보유 골드보다 많은 금액은 변제할 수 없습니다.");
+        return;
+      }
+      const pay = Math.min(val, state.debt);
+      state.gold -= pay;
+      state.debt -= pay;
+      log(`💸 빚 ${pay}G를 변제했습니다. (남은 빚: ${state.debt}G)`);
+      if(state.debt<=0){
+        state.debt = 0;
+        state.gameCompleted = true;
+        log("🎉 모든 빚을 갚았습니다! 농장 인생의 새로운 시작입니다. (엔딩)");
+      }
+      updateStatsUI();
+    }
+
+    // ===== 의뢰 수락/취소 =====
+    function acceptQuest(offerIndex){
+      const offer = state.questOffers[offerIndex];
+      if(!offer || offer.accepted) return;
+      offer.accepted = true;
+      state.activeQuests.push({
+        cropId: offer.cropId,
+        target: offer.target,
+        progress:0,
+        reward: offer.reward,
+        clientResidentId: offer.clientResidentId,
+        completed:false
+      });
+      const res = state.residents.find(r=>r.id===offer.clientResidentId);
+      const crop = crops[offer.cropId];
+      log(`"${res ? res.name : "???"}"의 ${crop.name} 의뢰를 수락했습니다. (이 의뢰는 완료하거나 취소할 때까지 유지됩니다.)`);
+      updateQuestUI();
+    }
+
+    function cancelActiveQuest(index){
+      const q = state.activeQuests[index];
+      if(!q) return;
+      const crop = crops[q.cropId];
+      const res = state.residents.find(r=>r.id===q.clientResidentId);
+      log(`"${res ? res.name : "???"}"의 ${crop.name} 의뢰를 취소했습니다.`);
+      state.activeQuests.splice(index,1);
+      updateQuestUI();
+    }
+
+    // ===== 이벤트 바인딩 =====
+    toolButtons.forEach(btn=>{
+      btn.addEventListener("click",()=>{
+        const tool = btn.getAttribute("data-tool");
+        if(!tool) return;
+        toolButtons.forEach(b=>b.classList.remove("selected"));
+        btn.classList.add("selected");
+        state.activeTool = tool;
+        updateToolHint();
+      });
+    });
+
+    ranchAnimalButtons.forEach(btn=>{
+      btn.addEventListener("click",()=>{
+        const a = btn.getAttribute("data-animal");
+        if(!a) return;
+        state.ranchSelectedAnimal = a;
+        updateRanchUI();
+      });
+    });
+
+    nextDayBtn.addEventListener("click", nextDay);
+    mineExploreBtn.addEventListener("click", mineExplore);
+    fishBtn.addEventListener("click", goFishing);
+    milkBtn.addEventListener("click", milkCows);
+    shearBtn.addEventListener("click", shearSheep);
+    debtPayBtn.addEventListener("click", payDebt);
+
+    const bgmToggleBtnEl = bgmToggleBtn;
+    bgmToggleBtnEl.addEventListener("click",()=>{
+      if(bgmAudio.paused){
+        bgmAudio.play().then(()=>{
+          bgmToggleBtnEl.textContent = "🔊 BGM 끄기";
+        }).catch(()=>{
+          log("브라우저 자동 재생 제한으로 인해, 다시 한 번 눌러주세요.");
+        });
+      } else {
+        bgmAudio.pause();
+        bgmToggleBtnEl.textContent = "🔈 BGM 켜기";
+      }
+    });
+
+    let explainOpen = false;
+    explainToggleBtn.addEventListener("click",()=>{
+      explainOpen = !explainOpen;
+      explainBody.classList.toggle("collapsed", !explainOpen);
+      explainToggleBtn.textContent = explainOpen ? "닫기" : "더보기";
+    });
+
+    // ===== 시작 =====
+    initFarm();
+    initRanch();
+    initCropList();
+    generateDailyQuestOffers();
+    generateVillageEvent();
+    updateUI();
+  </script>
+</body>
+</html>
