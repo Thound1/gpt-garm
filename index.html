@@ -1025,24 +1025,42 @@
           div.classList.add("grass");
         } else if(t.type==="tilled"){
           div.classList.add("tilled");
-        } else if(t.type==="crop" && t.cropId){
-          const crop = crops[t.cropId];
-          if(t.stage===1){
-            div.classList.add("crop-1");
-            icon = crop.emoji;
-          } else if(t.stage===2){
-            div.classList.add("crop-2");
-            icon = crop.emoji;
-          } else if(t.stage>=crop.growStages){
-            div.classList.add("crop-3");
-            icon = crop.emoji;
-            if(t.quality && t.quality<1){
-              div.classList.add("low-quality");
-            }
-          } else {
-            div.classList.add("tilled");
-          }
-        }
+} else if(t.type==="crop" && t.cropId){
+  const crop = crops[t.cropId];
+  const growStages = crop.growStages || 1;
+
+  // 현재 성장 진행도(0 ~ 1 이상)
+  const progress = t.stage / growStages;
+
+  // 시각적으로 보여줄 3단계 스테이지(1,2,3)
+  let visualStage;
+  if (progress <= 0) {
+    visualStage = 0;      // 거의 씨앗 단계 (사실상 안 나와야 할 상태)
+  } else if (progress < 0.4) {
+    visualStage = 1;      // 초반 성장
+  } else if (progress < 1) {
+    visualStage = 2;      // 중후반 성장
+  } else {
+    visualStage = 3;      // 완전히 성장
+  }
+
+  if (visualStage === 1) {
+    div.classList.add("crop-1");
+    icon = crop.emoji;
+  } else if (visualStage === 2) {
+    div.classList.add("crop-2");
+    icon = crop.emoji;
+  } else if (visualStage === 3) {
+    div.classList.add("crop-3");
+    icon = crop.emoji;
+    if (t.quality && t.quality < 1) {
+      div.classList.add("low-quality");
+    }
+  } else {
+    // 혹시라도 예외가 있으면 최소한 갈린 땅으로
+    div.classList.add("tilled");
+  }
+}
         if(t.wateredToday){
           div.classList.add("watered");
         }
@@ -2513,3 +2531,4 @@
   </script>
 </body>
 </html>
+
